@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tecnocasa Estate Viewer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Spectral:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css">
+  <script>window.__ENV = window.__ENV || {};</script>
+  <script src="./env.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="./app.js" defer></script>
+</head>
+<body>
+  <div class="bg-orb orb-left"></div>
+  <div class="bg-orb orb-right"></div>
+
+  <header class="hero">
+    <div>
+      <p class="eyebrow">Estate Viewer</p>
+      <h1>Tecnocasa Cards</h1>
+      <p class="subtitle">Browse listings from Supabase with live filters and grouping.</p>
+    </div>
+    <div class="hero-stats">
+      <div class="stat">
+        <span class="stat-label">Loaded</span>
+        <span id="count" class="stat-value">0</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Status</span>
+        <span id="status" class="stat-value">Idle</span>
+      </div>
+      <button id="signOutBtn" class="btn ghost hidden">Sign out</button>
+    </div>
+  </header>
+
+  <section id="configPanel" class="config hidden">
+    <div>
+      <h2>Supabase Config</h2>
+      <p>Set the viewer keys or inject them via env.js on deploy.</p>
+    </div>
+    <div class="config-grid">
+      <label class="control">
+        <span>Supabase URL</span>
+        <input id="supabaseUrlInput" type="text" placeholder="https://project.supabase.co">
+      </label>
+      <label class="control">
+        <span>Supabase anon key</span>
+        <input id="supabaseKeyInput" type="password" placeholder="anon key">
+      </label>
+    </div>
+    <button id="saveConfigBtn" class="btn">Save config</button>
+  </section>
+
+  <section id="authPanel" class="config hidden">
+    <div>
+      <h2>Viewer Login</h2>
+      <p>Sign in to access the listings.</p>
+    </div>
+    <div class="config-grid">
+      <label class="control" id="authEmailRow">
+        <span>Email</span>
+        <input id="authEmail" type="email" placeholder="viewer@example.com">
+      </label>
+      <label class="control">
+        <span>Password</span>
+        <input id="authPassword" type="password" placeholder="Password">
+      </label>
+    </div>
+    <button id="authLoginBtn" class="btn">Sign in</button>
+    <p id="authMessage" class="status"></p>
+  </section>
+
+  <section class="controls">
+    <div class="control-row">
+      <label class="control">
+        <span>Search</span>
+        <input id="searchInput" type="search" placeholder="Title, location, price">
+      </label>
+      <label class="control">
+        <span>Type</span>
+        <select id="typeFilter">
+          <option value="all">All</option>
+          <option value="acquis">Acquis</option>
+          <option value="locazi">Locazi</option>
+        </select>
+      </label>
+      <label class="control">
+        <span>Group</span>
+        <select id="groupBy">
+          <option value="none">None</option>
+          <option value="region_title">Region</option>
+          <option value="city_title">Zone</option>
+          <option value="district_title">District</option>
+        </select>
+      </label>
+      <label class="control">
+        <span>Sort</span>
+        <select id="sortBy">
+          <option value="title">Title</option>
+          <option value="error_margin">Error margin</option>
+        </select>
+      </label>
+      <label class="control">
+        <span>Order</span>
+        <select id="sortOrder">
+          <option value="asc">Asc</option>
+          <option value="desc">Desc</option>
+        </select>
+      </label>
+      <button id="reloadBtn" class="btn ghost">Reload</button>
+    </div>
+  </section>
+
+  <main>
+    <div id="groups" class="groups"></div>
+    <div class="pagination">
+      <button id="loadMoreBtn" class="btn ghost">Load more</button>
+    </div>
+  </main>
+
+  <div id="backdrop" class="backdrop hidden"></div>
+  <aside id="details" class="details hidden">
+    <div class="details-header">
+      <div>
+        <p id="detailType" class="eyebrow">Details</p>
+        <h2 id="detailTitle">Select a card</h2>
+        <p id="detailLocation" class="subtitle"></p>
+      </div>
+      <button id="detailClose" class="btn ghost">Close</button>
+    </div>
+    <div class="details-content">
+      <div id="detailImages" class="detail-images"></div>
+      <div class="detail-grid">
+        <div class="detail-item">
+          <span class="label">Price</span>
+          <span id="detailPrice" class="value">-</span>
+        </div>
+        <div class="detail-item">
+          <span class="label">Surface</span>
+          <span id="detailSurface" class="value">-</span>
+        </div>
+        <div class="detail-item">
+          <span class="label">Rooms</span>
+          <span id="detailRooms" class="value">-</span>
+        </div>
+        <div class="detail-item">
+          <span class="label">Exclusive</span>
+          <span id="detailExclusive" class="value">-</span>
+        </div>
+        <div class="detail-item">
+          <span class="label">Latitude</span>
+          <span id="detailLat" class="value">-</span>
+        </div>
+        <div class="detail-item">
+          <span class="label">Longitude</span>
+          <span id="detailLon" class="value">-</span>
+        </div>
+        <div class="detail-item">
+          <span class="label">Error margin</span>
+          <span id="detailError" class="value">-</span>
+        </div>
+        <div class="detail-item">
+          <span class="label">Approx</span>
+          <span id="detailApprox" class="value">-</span>
+        </div>
+        <div class="detail-item">
+          <span class="label">Map</span>
+          <a id="detailMap" class="link" href="#" target="_blank" rel="noreferrer">Open map</a>
+        </div>
+        <div class="detail-item">
+          <span class="label">Source</span>
+          <a id="detailSource" class="link" href="#" target="_blank" rel="noreferrer">Open listing</a>
+        </div>
+      </div>
+      <div class="detail-section">
+        <h3>Nearby points</h3>
+        <ul id="detailProximity" class="detail-list"></ul>
+      </div>
+      <p id="detailErrorMessage" class="status"></p>
+    </div>
+  </aside>
+</body>
+</html>
