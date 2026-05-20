@@ -12,9 +12,10 @@ let currentSession = null;
 
 const state = {
   items: [],
-  page: 0,
+  page: 1,
   pageSize: 24,
-  hasMore: true,
+  total: 0,
+  totalPages: 1,
   loading: false,
   query: "",
   type: "all",
@@ -28,9 +29,12 @@ const elements = {
   count: document.getElementById("count"),
   status: document.getElementById("status"),
   groups: document.getElementById("groups"),
-  loadMoreBtn: document.getElementById("loadMoreBtn"),
+  pageSizeInput: document.getElementById("pageSizeInput"),
+  prevPageBtn: document.getElementById("prevPageBtn"),
+  nextPageBtn: document.getElementById("nextPageBtn"),
+  pageInfo: document.getElementById("pageInfo"),
   searchInput: document.getElementById("searchInput"),
-  typeFilter: document.getElementById("typeFilter"),
+  typeFilterGroup: document.getElementById("typeFilterGroup"),
   groupBy: document.getElementById("groupBy"),
   sortBy: document.getElementById("sortBy"),
   sortOrder: document.getElementById("sortOrder"),
@@ -175,6 +179,19 @@ function escapeLike(value) {
   return value.replace(/[\\%*]/g, "\\$&");
 }
 
+function setActiveTypeButton() {
+  elements.typeFilterGroup.querySelectorAll("[data-type]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.type === state.type);
+  });
+}
+
+function updatePaginationControls() {
+  elements.pageInfo.textContent = `Page ${state.page} of ${state.totalPages}`;
+  elements.prevPageBtn.disabled = state.page <= 1 || state.loading;
+  elements.nextPageBtn.disabled = state.page >= state.totalPages || state.loading;
+  elements.pageSizeInput.value = String(state.pageSize);
+}
+
 function buildQueryParams() {
   const params = new URLSearchParams();
   params.set("select", "*");
@@ -217,22 +234,24 @@ async function fetchEstates(reset = false) {
     return;
   }
 
-  if (state.loading || (!state.hasMore && !reset)) {
+  if (state.loading) {
     return;
   }
 
   state.loading = true;
+  updatePaginationControls();
   setStatus("Loading...");
 
   if (reset) {
     state.items = [];
-    state.page = 0;
-    state.hasMore = true;
+    state.page = 1;
+    state.total = 0;
+    state.totalPages = 1;
     renderGroups();
   }
 
   const params = buildQueryParams();
-  const from = state.page * state.pageSize;
+  const from = (state.page - 1) * state.pageSize;
   const to = from + state.pageSize - 1;
 
   const response = await fetch(
@@ -249,6 +268,7 @@ async function fetchEstates(reset = false) {
     const errorText = await response.text();
     setStatus(`Load failed: ${errorText}`, true);
     state.loading = false;
+    updatePaginationControls();
     return;
   }
 
@@ -256,17 +276,20 @@ async function fetchEstates(reset = false) {
   const contentRange = response.headers.get("Content-Range") || "";
   const total = Number(contentRange.split("/")[1]) || 0;
 
-  state.items = state.items.concat(data);
-  state.page += 1;
-  state.hasMore = state.items.length < total;
-  elements.count.textContent = String(total || state.items.length);
+  state.items = data;
+  state.total = total || data.length;
+  state.totalPages = Math.max(1, Math.ceil(state.total / state.pageSize));
+  elements.count.textContent = String(state.total);
 
   renderGroups();
-  setStatus(state.hasMore ? "Loaded" : "All results loaded");
+  setActiveTypeButton();
+  setStatus("Loaded");
   state.loading = false;
+  updatePaginationControls();
 }
 
 function resetAndLoad() {
+  state.page = 1;
   fetchEstates(true);
 }
 
@@ -535,7 +558,6 @@ async function handleSignOut() {
 function attachEvents() {
   elements.saveConfigBtn.addEventListener("click", saveConfig);
   elements.reloadBtn.addEventListener("click", resetAndLoad);
-  elements.loadMoreBtn.addEventListener("click", () => fetchEstates(false));
   elements.authLoginBtn.addEventListener("click", handleLogin);
   elements.signOutBtn.addEventListener("click", handleSignOut);
 
@@ -544,8 +566,11 @@ function attachEvents() {
     resetAndLoad();
   });
 
-  elements.typeFilter.addEventListener("change", () => {
-    state.type = elements.typeFilter.value;
+  elements.typeFilterGroup.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-type]");
+    if (!button) return;
+    state.type = button.dataset.type;
+    setActiveTypeButton();
     resetAndLoad();
   });
 
@@ -567,6 +592,23 @@ function attachEvents() {
   elements.hideApproxToggle.addEventListener("change", () => {
     state.hideApprox = elements.hideApproxToggle.checked;
     resetAndLoad();
+  });
+
+  elements.pageSizeInput.addEventListener("change", () => {
+    state.pageSize = Math.max(1, Math.min(200, Number(elements.pageSizeInput.value || 24)));
+    resetAndLoad();
+  });
+
+  elements.prevPageBtn.addEventListener("click", () => {
+    if (state.page <= 1) return;
+    state.page -= 1;
+    fetchEstates(false);
+  });
+
+  elements.nextPageBtn.addEventListener("click", () => {
+    if (state.page >= state.totalPages) return;
+    state.page += 1;
+    fetchEstates(false);
   });
 
   elements.detailClose.addEventListener("click", closeDetails);

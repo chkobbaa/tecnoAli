@@ -79,14 +79,14 @@
         <span>Search</span>
         <input id="searchInput" type="search" placeholder="Title, location, price">
       </label>
-      <label class="control">
-        <span>Type</span>
-        <select id="typeFilter">
-          <option value="all">All</option>
-          <option value="acquis">Acquis</option>
-          <option value="locazi">Locazi</option>
-        </select>
-      </label>
+      <div class="control">
+        <span>Contract</span>
+        <div id="typeFilterGroup" class="segmented-control" role="group" aria-label="Contract filter">
+          <button class="segment active" type="button" data-type="all">All</button>
+          <button class="segment" type="button" data-type="acquis">Acquis</button>
+          <button class="segment" type="button" data-type="locazi">Locazi</button>
+        </div>
+      </div>
       <label class="control">
         <span>Group</span>
         <select id="groupBy">
@@ -121,7 +121,15 @@
   <main>
     <div id="groups" class="groups"></div>
     <div class="pagination">
-      <button id="loadMoreBtn" class="btn ghost">Load more</button>
+      <label class="control page-size-control">
+        <span>Houses per page</span>
+        <input id="pageSizeInput" type="number" min="1" max="200" step="1" value="24">
+      </label>
+      <div class="page-actions">
+        <button id="prevPageBtn" class="btn ghost" type="button">Previous</button>
+        <span id="pageInfo" class="page-info">Page 1 of 1</span>
+        <button id="nextPageBtn" class="btn ghost" type="button">Next</button>
+      </div>
     </div>
   </main>
 
