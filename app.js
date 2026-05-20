@@ -8,6 +8,7 @@ const config = {
 };
 
 let supabaseClient = null;
+let currentSession = null;
 
 const state = {
   items: [],
@@ -129,6 +130,8 @@ async function requireAuth() {
     return false;
   }
 
+  currentSession = data.session;
+
   hideAuthPanel();
   elements.signOutBtn.classList.remove("hidden");
   return true;
@@ -158,9 +161,10 @@ function saveConfig() {
 }
 
 function supabaseHeaders() {
+  const token = currentSession?.access_token;
   return {
     apikey: config.key,
-    Authorization: `Bearer ${config.key}`,
+    Authorization: `Bearer ${token || config.key}`,
     Prefer: "count=exact",
   };
 }
@@ -359,7 +363,7 @@ function renderGroups() {
 }
 
 async function fetchImages(estate) {
-  if (!hasConfig()) return [];
+  if (!hasConfig() || !currentSession) return [];
 
   const params = new URLSearchParams({
     select: "url",
@@ -382,7 +386,7 @@ async function fetchImages(estate) {
 }
 
 async function fetchProximities(estate) {
-  if (!hasConfig()) return [];
+  if (!hasConfig() || !currentSession) return [];
 
   const params = new URLSearchParams({
     select: "name,dist_m,region",
@@ -517,6 +521,7 @@ async function handleSignOut() {
     return;
   }
   await client.auth.signOut();
+  currentSession = null;
   elements.signOutBtn.classList.add("hidden");
   showAuthPanel("Signed out");
 }
@@ -565,6 +570,7 @@ function init() {
   const client = initSupabase();
   if (client) {
     client.auth.onAuthStateChange((_event, session) => {
+      currentSession = session || null;
       if (session) {
         elements.signOutBtn.classList.remove("hidden");
         hideAuthPanel();
