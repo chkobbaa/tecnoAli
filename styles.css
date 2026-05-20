@@ -13,12 +13,21 @@
   box-sizing: border-box;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
   margin: 0;
   min-height: 100vh;
   background: var(--bg);
   color: var(--ink);
   font-family: "Spectral", serif;
+  overflow-x: hidden;
+}
+
+body.details-open {
+  overflow: hidden;
 }
 
 .bg-orb {
@@ -69,6 +78,7 @@ body {
   color: var(--muted);
   margin: 0;
   max-width: 520px;
+  overflow-wrap: anywhere;
 }
 
 .hero-stats {
@@ -143,11 +153,13 @@ body {
 
 .control input,
 .control select {
+  min-height: 44px;
   padding: 10px 12px;
   border-radius: 12px;
   border: 1px solid var(--border);
   background: #fff;
   font-family: "Space Grotesk", sans-serif;
+  font-size: 1rem;
 }
 
 .segmented-control,
@@ -159,7 +171,7 @@ body {
 }
 
 .segment {
-  min-height: 40px;
+  min-height: 44px;
   padding: 9px 16px;
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -191,6 +203,7 @@ body {
   background: var(--accent);
   color: #fff;
   border: none;
+  min-height: 44px;
   padding: 10px 18px;
   border-radius: 999px;
   font-family: "Space Grotesk", sans-serif;
@@ -276,12 +289,14 @@ main {
   font-family: "Space Grotesk", sans-serif;
   font-weight: 600;
   margin-bottom: 6px;
+  line-height: 1.25;
 }
 
 .card-meta {
   color: var(--muted);
   font-size: 0.85rem;
   margin-bottom: 10px;
+  line-height: 1.35;
 }
 
 .card-tags {
@@ -370,6 +385,8 @@ main {
 }
 
 .details-content {
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding-right: 6px;
 }
@@ -435,6 +452,7 @@ main {
 .status {
   color: var(--muted);
   font-size: 0.9rem;
+  overflow-wrap: anywhere;
 }
 
 @keyframes rise {
@@ -456,5 +474,285 @@ main {
   .hero-stats {
     width: 100%;
     grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  body {
+    background: #f7f1e7;
+  }
+
+  .bg-orb {
+    display: none;
+  }
+
+  .hero {
+    gap: 18px;
+    padding: 22px 16px 14px;
+  }
+
+  .hero h1 {
+    font-size: 2rem;
+    line-height: 1.05;
+  }
+
+  .subtitle {
+    font-size: 0.95rem;
+    line-height: 1.35;
+  }
+
+  .hero-stats {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .stat {
+    border-radius: 10px;
+    padding: 10px 12px;
+    box-shadow: 0 10px 24px rgba(31, 45, 47, 0.1);
+  }
+
+  .stat-value {
+    font-size: 0.95rem;
+    line-height: 1.2;
+  }
+
+  .config,
+  .controls,
+  main {
+    margin-left: 0;
+    margin-right: 0;
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .hero > *,
+  .hero-stats,
+  .stat,
+  .config,
+  .controls,
+  main,
+  .group,
+  .control,
+  .segmented-control {
+    min-width: 0;
+  }
+
+  .config {
+    border-radius: 12px;
+    padding: 16px;
+    width: 100%;
+  }
+
+  .config p {
+    overflow-wrap: anywhere;
+  }
+
+  .config-grid,
+  .control-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .control-row {
+    align-items: stretch;
+  }
+
+  .control,
+  .control input,
+  .control select,
+  .control-row > .btn,
+  .page-actions .btn {
+    width: 100%;
+  }
+
+  .segmented-control {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .segment:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .segment {
+    min-width: 0;
+    width: 100%;
+    padding-left: 8px;
+    padding-right: 8px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .control-inline {
+    min-height: 48px;
+    flex-direction: row;
+    justify-content: space-between;
+    padding: 0 2px;
+  }
+
+  .groups {
+    gap: 20px;
+  }
+
+  .group {
+    gap: 10px;
+  }
+
+  .group h2 {
+    font-size: 1rem;
+  }
+
+  .cards-grid {
+    gap: 12px;
+    grid-template-columns: 1fr;
+  }
+
+  .card {
+    display: grid;
+    grid-template-columns: minmax(108px, 35%) 1fr;
+    min-height: 132px;
+    border-radius: 12px;
+    box-shadow: 0 10px 24px rgba(31, 45, 47, 0.1);
+  }
+
+  .card-media {
+    height: 100%;
+    min-height: 132px;
+  }
+
+  .card-body {
+    min-width: 0;
+    padding: 12px;
+  }
+
+  .card-title {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    font-size: 0.98rem;
+  }
+
+  .card-meta {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    margin-bottom: 8px;
+  }
+
+  .card-tags {
+    gap: 6px;
+    font-size: 0.74rem;
+  }
+
+  .tag {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding: 3px 8px;
+  }
+
+  .pagination {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin-top: 18px;
+  }
+
+  .page-actions {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    width: 100%;
+  }
+
+  .page-info {
+    min-width: 88px;
+    align-self: center;
+    font-size: 0.88rem;
+  }
+
+  .details {
+    inset: 0;
+    width: 100vw;
+    height: 100dvh;
+    padding: 16px;
+    border-radius: 0;
+    gap: 14px;
+    transform: translateY(0);
+  }
+
+  .details.hidden {
+    transform: translateY(24px);
+  }
+
+  .details-header {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    align-items: flex-start;
+    background: var(--card);
+    padding-bottom: 10px;
+  }
+
+  .details-header h2 {
+    margin: 4px 0;
+    font-size: 1.35rem;
+    line-height: 1.15;
+  }
+
+  .details-content {
+    padding-right: 0;
+  }
+
+  .detail-images {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    grid-template-columns: none;
+    padding-bottom: 4px;
+  }
+
+  .detail-images img {
+    flex: 0 0 82%;
+    height: 190px;
+    border-radius: 10px;
+    scroll-snap-align: start;
+  }
+
+  .detail-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .detail-item {
+    border-radius: 10px;
+    padding: 9px 10px;
+    min-width: 0;
+  }
+
+  .detail-item .value,
+  .link {
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (max-width: 520px) {
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .page-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .card {
+    grid-template-columns: 96px 1fr;
   }
 }

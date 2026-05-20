@@ -9,6 +9,7 @@ const config = {
 
 let supabaseClient = null;
 let currentSession = null;
+let searchTimer = null;
 
 const state = {
   items: [],
@@ -286,6 +287,13 @@ async function fetchEstates(reset = false) {
   setStatus("Loaded");
   state.loading = false;
   updatePaginationControls();
+
+  if (!reset) {
+    document.querySelector("main")?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }
 }
 
 function resetAndLoad() {
@@ -505,11 +513,13 @@ function openDetails(item) {
 
   elements.details.classList.remove("hidden");
   elements.backdrop.classList.remove("hidden");
+  document.body.classList.add("details-open");
 }
 
 function closeDetails() {
   elements.details.classList.add("hidden");
   elements.backdrop.classList.add("hidden");
+  document.body.classList.remove("details-open");
 }
 
 async function handleLogin() {
@@ -562,8 +572,11 @@ function attachEvents() {
   elements.signOutBtn.addEventListener("click", handleSignOut);
 
   elements.searchInput.addEventListener("input", () => {
-    state.query = elements.searchInput.value.trim();
-    resetAndLoad();
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => {
+      state.query = elements.searchInput.value.trim();
+      resetAndLoad();
+    }, 300);
   });
 
   elements.typeFilterGroup.addEventListener("click", (event) => {
