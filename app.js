@@ -21,6 +21,7 @@ const state = {
   groupBy: "none",
   sortBy: "title",
   sortOrder: "asc",
+  hideApprox: true,
 };
 
 const elements = {
@@ -33,6 +34,7 @@ const elements = {
   groupBy: document.getElementById("groupBy"),
   sortBy: document.getElementById("sortBy"),
   sortOrder: document.getElementById("sortOrder"),
+  hideApproxToggle: document.getElementById("hideApproxToggle"),
   reloadBtn: document.getElementById("reloadBtn"),
   configPanel: document.getElementById("configPanel"),
   supabaseUrlInput: document.getElementById("supabaseUrlInput"),
@@ -176,6 +178,10 @@ function escapeLike(value) {
 function buildQueryParams() {
   const params = new URLSearchParams();
   params.set("select", "*");
+
+  if (state.hideApprox) {
+    params.set("approx_used", "eq.false");
+  }
 
   if (state.type !== "all") {
     params.set("contract_type", `eq.${state.type}`);
@@ -555,6 +561,11 @@ function attachEvents() {
 
   elements.sortOrder.addEventListener("change", () => {
     state.sortOrder = elements.sortOrder.value;
+    resetAndLoad();
+  });
+
+  elements.hideApproxToggle.addEventListener("change", () => {
+    state.hideApprox = elements.hideApproxToggle.checked;
     resetAndLoad();
   });
 

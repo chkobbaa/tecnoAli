@@ -150,6 +150,17 @@ body {
   font-family: "Space Grotesk", sans-serif;
 }
 
+.control-inline {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+}
+
+.control-inline input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+}
+
 .btn {
   background: var(--accent);
   color: #fff;
