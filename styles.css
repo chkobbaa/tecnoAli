@@ -143,6 +143,22 @@ body.details-open {
   align-items: flex-end;
 }
 
+.primary-filters {
+  margin-bottom: 12px;
+}
+
+.secondary-filters {
+  gap: 12px;
+}
+
+.search-control {
+  flex: 1 1 320px;
+}
+
+.range-control input {
+  width: 130px;
+}
+
 .control {
   display: flex;
   flex-direction: column;
@@ -252,7 +268,7 @@ main {
 
 .card {
   background: var(--card);
-  border-radius: 20px;
+  border-radius: 8px;
   border: 1px solid var(--border);
   box-shadow: var(--shadow);
   overflow: hidden;
@@ -261,6 +277,17 @@ main {
   cursor: pointer;
   transition: transform 0.2s ease;
   animation: rise 0.4s ease both;
+}
+
+.card.checked {
+  background: #ece8df;
+  border-color: #c8bdad;
+  box-shadow: none;
+  opacity: 0.68;
+}
+
+.card.checked .card-media img {
+  filter: grayscale(0.85);
 }
 
 .card:hover {
@@ -283,6 +310,31 @@ main {
 
 .card-body {
   padding: 14px 16px 18px;
+}
+
+.card-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+}
+
+.check-btn {
+  min-height: 32px;
+  border: 1px solid rgba(42, 127, 111, 0.35);
+  border-radius: 8px;
+  background: rgba(42, 127, 111, 0.12);
+  color: var(--accent-2);
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 5px 9px;
+}
+
+.card.checked .check-btn {
+  background: #fff;
+  color: var(--muted);
+  border-color: var(--border);
 }
 
 .card-title {
@@ -567,6 +619,10 @@ main {
     width: 100%;
   }
 
+  .range-control input {
+    width: 100%;
+  }
+
   .segmented-control {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -626,6 +682,10 @@ main {
   .card-body {
     min-width: 0;
     padding: 12px;
+  }
+
+  .card-actions {
+    justify-content: flex-start;
   }
 
   .card-title {

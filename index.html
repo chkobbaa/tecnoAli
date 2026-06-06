@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="en">
+<html lang="fr">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Tecnocasa Estate Viewer</title>
+  <title>Visionneuse Tecnocasa</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Spectral:wght@400;500;600&display=swap" rel="stylesheet">
@@ -19,102 +19,136 @@
 
   <header class="hero">
     <div>
-      <p class="eyebrow">Estate Viewer</p>
-      <h1>Tecnocasa Cards</h1>
-      <p class="subtitle">Browse listings from Supabase with live filters and grouping.</p>
+      <p class="eyebrow">Visionneuse</p>
+      <h1>Biens Tecnocasa</h1>
+      <p class="subtitle">Parcourez les annonces Supabase avec une recherche large, des filtres précis et un suivi de vérification.</p>
     </div>
     <div class="hero-stats">
       <div class="stat">
-        <span class="stat-label">Loaded</span>
+        <span class="stat-label">Affichés</span>
         <span id="count" class="stat-value">0</span>
       </div>
       <div class="stat">
-        <span class="stat-label">Status</span>
-        <span id="status" class="stat-value">Idle</span>
+        <span class="stat-label">État</span>
+        <span id="status" class="stat-value">Prêt</span>
       </div>
-      <button id="signOutBtn" class="btn ghost hidden">Sign out</button>
+      <button id="signOutBtn" class="btn ghost hidden">Se déconnecter</button>
     </div>
   </header>
 
   <section id="configPanel" class="config hidden">
     <div>
-      <h2>Supabase Config</h2>
-      <p>Set the viewer keys or inject them via env.js on deploy.</p>
+      <h2>Configuration Supabase</h2>
+      <p>Définissez les clés de lecture ou injectez-les via env.js au déploiement.</p>
     </div>
     <div class="config-grid">
       <label class="control">
-        <span>Supabase URL</span>
+        <span>URL Supabase</span>
         <input id="supabaseUrlInput" type="text" placeholder="https://project.supabase.co">
       </label>
       <label class="control">
-        <span>Supabase anon key</span>
-        <input id="supabaseKeyInput" type="password" placeholder="anon key">
+        <span>Clé anonyme Supabase</span>
+        <input id="supabaseKeyInput" type="password" placeholder="clé anonyme">
       </label>
     </div>
-    <button id="saveConfigBtn" class="btn">Save config</button>
+    <button id="saveConfigBtn" class="btn">Enregistrer</button>
   </section>
 
   <section id="authPanel" class="config hidden">
     <div>
-      <h2>Viewer Login</h2>
-      <p>Sign in to access the listings.</p>
+      <h2>Connexion</h2>
+      <p>Connectez-vous pour consulter les annonces.</p>
     </div>
     <div class="config-grid">
       <label class="control" id="authEmailRow">
-        <span>Email</span>
+        <span>E-mail</span>
         <input id="authEmail" type="email" placeholder="viewer@example.com">
       </label>
       <label class="control">
-        <span>Password</span>
-        <input id="authPassword" type="password" placeholder="Password">
+        <span>Mot de passe</span>
+        <input id="authPassword" type="password" placeholder="Mot de passe">
       </label>
     </div>
-    <button id="authLoginBtn" class="btn">Sign in</button>
+    <button id="authLoginBtn" class="btn">Se connecter</button>
     <p id="authMessage" class="status"></p>
   </section>
 
   <section class="controls">
-    <div class="control-row">
-      <label class="control">
-        <span>Search</span>
-        <input id="searchInput" type="search" placeholder="Title, location, price">
+    <div class="control-row primary-filters">
+      <label class="control search-control">
+        <span>Recherche globale</span>
+        <input id="searchInput" type="search" placeholder="Titre, lieu, prix, surface, ID, type...">
       </label>
       <div class="control">
-        <span>Contract</span>
-        <div id="typeFilterGroup" class="segmented-control" role="group" aria-label="Contract filter">
-          <button class="segment active" type="button" data-type="all">All</button>
-          <button class="segment" type="button" data-type="acquis">Acquis</button>
-          <button class="segment" type="button" data-type="locazi">Locazi</button>
+        <span>Contrat</span>
+        <div id="typeFilterGroup" class="segmented-control" role="group" aria-label="Filtre contrat">
+          <button class="segment active" type="button" data-type="all">Tous</button>
+          <button class="segment" type="button" data-type="acquis">Vente</button>
+          <button class="segment" type="button" data-type="locazi">Location</button>
         </div>
       </div>
       <label class="control">
-        <span>Group</span>
+        <span>Grouper</span>
         <select id="groupBy">
-          <option value="none">None</option>
-          <option value="region_title">Region</option>
+          <option value="none">Aucun</option>
+          <option value="region_title">Région</option>
           <option value="city_title">Zone</option>
-          <option value="district_title">District</option>
+          <option value="district_title">Quartier</option>
         </select>
       </label>
       <label class="control">
-        <span>Sort</span>
+        <span>Trier</span>
         <select id="sortBy">
-          <option value="title">Title</option>
-          <option value="error_margin">Error margin</option>
+          <option value="title">Titre</option>
+          <option value="price">Prix</option>
+          <option value="surface">Surface</option>
+          <option value="rooms">Pièces</option>
+          <option value="error_margin">Marge d'erreur</option>
         </select>
       </label>
       <label class="control">
-        <span>Order</span>
+        <span>Ordre</span>
         <select id="sortOrder">
           <option value="asc">Asc</option>
           <option value="desc">Desc</option>
         </select>
       </label>
+      <button id="reloadBtn" class="btn ghost">Actualiser</button>
+    </div>
+    <div class="control-row secondary-filters">
+      <label class="control">
+        <span>Lieu</span>
+        <input id="placeFilter" type="search" placeholder="Ville, zone, quartier">
+      </label>
+      <label class="control range-control">
+        <span>Prix min</span>
+        <input id="minPrice" type="number" min="0" step="1000" placeholder="0">
+      </label>
+      <label class="control range-control">
+        <span>Prix max</span>
+        <input id="maxPrice" type="number" min="0" step="1000" placeholder="Illimité">
+      </label>
+      <label class="control range-control">
+        <span>Surface min</span>
+        <input id="minSurface" type="number" min="0" step="10" placeholder="0">
+      </label>
+      <label class="control range-control">
+        <span>Pièces min</span>
+        <input id="minRooms" type="number" min="0" step="1" placeholder="0">
+      </label>
+      <label class="control">
+        <span>Vérification</span>
+        <select id="checkedFilter">
+          <option value="all">Tous</option>
+          <option value="unchecked">À vérifier</option>
+          <option value="checked">Vérifiés</option>
+        </select>
+      </label>
       <label class="control control-inline">
-        <span>Hide approximate</span>
+        <span>Masquer approx.</span>
         <input id="hideApproxToggle" type="checkbox" checked>
       </label>
-      <button id="reloadBtn" class="btn ghost">Reload</button>
+      <button id="clearFiltersBtn" class="btn ghost" type="button">Effacer</button>
     </div>
   </section>
 
@@ -122,13 +156,13 @@
     <div id="groups" class="groups"></div>
     <div class="pagination">
       <label class="control page-size-control">
-        <span>Houses per page</span>
+        <span>Biens par page</span>
         <input id="pageSizeInput" type="number" min="1" max="200" step="1" value="24">
       </label>
       <div class="page-actions">
-        <button id="prevPageBtn" class="btn ghost" type="button">Previous</button>
-        <span id="pageInfo" class="page-info">Page 1 of 1</span>
-        <button id="nextPageBtn" class="btn ghost" type="button">Next</button>
+        <button id="prevPageBtn" class="btn ghost" type="button">Précédent</button>
+        <span id="pageInfo" class="page-info">Page 1 sur 1</span>
+        <button id="nextPageBtn" class="btn ghost" type="button">Suivant</button>
       </div>
     </div>
   </main>
@@ -137,17 +171,17 @@
   <aside id="details" class="details hidden">
     <div class="details-header">
       <div>
-        <p id="detailType" class="eyebrow">Details</p>
-        <h2 id="detailTitle">Select a card</h2>
+        <p id="detailType" class="eyebrow">Détails</p>
+        <h2 id="detailTitle">Sélectionnez une annonce</h2>
         <p id="detailLocation" class="subtitle"></p>
       </div>
-      <button id="detailClose" class="btn ghost">Close</button>
+      <button id="detailClose" class="btn ghost">Fermer</button>
     </div>
     <div class="details-content">
       <div id="detailImages" class="detail-images"></div>
       <div class="detail-grid">
         <div class="detail-item">
-          <span class="label">Price</span>
+          <span class="label">Prix</span>
           <span id="detailPrice" class="value">-</span>
         </div>
         <div class="detail-item">
@@ -155,11 +189,11 @@
           <span id="detailSurface" class="value">-</span>
         </div>
         <div class="detail-item">
-          <span class="label">Rooms</span>
+          <span class="label">Pièces</span>
           <span id="detailRooms" class="value">-</span>
         </div>
         <div class="detail-item">
-          <span class="label">Exclusive</span>
+          <span class="label">Exclusivité</span>
           <span id="detailExclusive" class="value">-</span>
         </div>
         <div class="detail-item">
@@ -171,24 +205,24 @@
           <span id="detailLon" class="value">-</span>
         </div>
         <div class="detail-item">
-          <span class="label">Error margin</span>
+          <span class="label">Marge d'erreur</span>
           <span id="detailError" class="value">-</span>
         </div>
         <div class="detail-item">
-          <span class="label">Approx</span>
+          <span class="label">Approx.</span>
           <span id="detailApprox" class="value">-</span>
         </div>
         <div class="detail-item">
-          <span class="label">Map</span>
-          <a id="detailMap" class="link" href="#" target="_blank" rel="noreferrer">Open map</a>
+          <span class="label">Carte</span>
+          <a id="detailMap" class="link" href="#" target="_blank" rel="noreferrer">Ouvrir la carte</a>
         </div>
         <div class="detail-item">
           <span class="label">Source</span>
-          <a id="detailSource" class="link" href="#" target="_blank" rel="noreferrer">Open listing</a>
+          <a id="detailSource" class="link" href="#" target="_blank" rel="noreferrer">Ouvrir l'annonce</a>
         </div>
       </div>
       <div class="detail-section">
-        <h3>Nearby points</h3>
+        <h3>Points à proximité</h3>
         <ul id="detailProximity" class="detail-list"></ul>
       </div>
       <p id="detailErrorMessage" class="status"></p>

@@ -10,9 +10,13 @@ const config = {
 let supabaseClient = null;
 let currentSession = null;
 let searchTimer = null;
+const checkedStorageKey = "TECNOCASA_CHECKED_HOUSES";
 
 const state = {
   items: [],
+  allItems: [],
+  filteredItems: [],
+  checkedKeys: new Set(JSON.parse(storage.getItem(checkedStorageKey) || "[]")),
   page: 1,
   pageSize: 24,
   total: 0,
@@ -24,6 +28,12 @@ const state = {
   sortBy: "title",
   sortOrder: "asc",
   hideApprox: true,
+  place: "",
+  minPrice: "",
+  maxPrice: "",
+  minSurface: "",
+  minRooms: "",
+  checkedFilter: "all",
 };
 
 const elements = {
@@ -35,12 +45,19 @@ const elements = {
   nextPageBtn: document.getElementById("nextPageBtn"),
   pageInfo: document.getElementById("pageInfo"),
   searchInput: document.getElementById("searchInput"),
+  placeFilter: document.getElementById("placeFilter"),
+  minPrice: document.getElementById("minPrice"),
+  maxPrice: document.getElementById("maxPrice"),
+  minSurface: document.getElementById("minSurface"),
+  minRooms: document.getElementById("minRooms"),
+  checkedFilter: document.getElementById("checkedFilter"),
   typeFilterGroup: document.getElementById("typeFilterGroup"),
   groupBy: document.getElementById("groupBy"),
   sortBy: document.getElementById("sortBy"),
   sortOrder: document.getElementById("sortOrder"),
   hideApproxToggle: document.getElementById("hideApproxToggle"),
   reloadBtn: document.getElementById("reloadBtn"),
+  clearFiltersBtn: document.getElementById("clearFiltersBtn"),
   configPanel: document.getElementById("configPanel"),
   supabaseUrlInput: document.getElementById("supabaseUrlInput"),
   supabaseKeyInput: document.getElementById("supabaseKeyInput"),
@@ -89,7 +106,7 @@ function initSupabase() {
   if (!supabaseClient) {
     const sdk = window.supabase;
     if (!sdk || !sdk.createClient) {
-      setStatus("Supabase SDK not loaded", true);
+      setStatus("SDK Supabase non chargé", true);
       return null;
     }
     supabaseClient = sdk.createClient(config.url, config.key, {
@@ -129,11 +146,11 @@ async function requireAuth() {
 
   const { data, error } = await client.auth.getSession();
   if (error) {
-    showAuthPanel("Auth error: " + error.message);
+    showAuthPanel("Erreur d'authentification : " + error.message);
     return false;
   }
   if (!data.session) {
-    showAuthPanel("Login required");
+    showAuthPanel("Connexion requise");
     return false;
   }
 
@@ -187,39 +204,138 @@ function setActiveTypeButton() {
 }
 
 function updatePaginationControls() {
-  elements.pageInfo.textContent = `Page ${state.page} of ${state.totalPages}`;
+  elements.pageInfo.textContent = `Page ${state.page} sur ${state.totalPages}`;
   elements.prevPageBtn.disabled = state.page <= 1 || state.loading;
   elements.nextPageBtn.disabled = state.page >= state.totalPages || state.loading;
   elements.pageSizeInput.value = String(state.pageSize);
 }
 
+function checkedKey(item) {
+  return `${item.contract_type || ""}:${item.estate_id || item.id || ""}`;
+}
+
+function isChecked(item) {
+  return state.checkedKeys.has(checkedKey(item));
+}
+
+function saveCheckedState() {
+  storage.setItem(checkedStorageKey, JSON.stringify(Array.from(state.checkedKeys)));
+}
+
+function normalizeText(value) {
+  return String(value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+function numericValue(value) {
+  const match = String(value ?? "").replace(/\s/g, "").replace(",", ".").match(/\d+(?:\.\d+)?/);
+  return match ? Number(match[0]) : null;
+}
+
+function itemSearchText(item) {
+  const rowValues = Object.values(item)
+    .filter((value) => ["string", "number", "boolean"].includes(typeof value))
+    .join(" ");
+  return normalizeText([
+    rowValues,
+    item.estate_id,
+    item.contract_type,
+    item.title,
+    item.location,
+    item.price,
+    item.surface,
+    item.rooms,
+    item.rooms_short,
+    item.city_title,
+    item.district_title,
+    item.region_title,
+    item.province_title,
+    item.exclusive ? "exclusif exclusive oui" : "",
+    item.approx_used ? "approximatif approx" : "",
+    isChecked(item) ? "verifie checked" : "a verifier unchecked",
+  ].join(" "));
+}
+
+function matchesFilters(item) {
+  if (state.type !== "all" && item.contract_type !== state.type) return false;
+  if (state.hideApprox && item.approx_used) return false;
+
+  if (state.checkedFilter === "checked" && !isChecked(item)) return false;
+  if (state.checkedFilter === "unchecked" && isChecked(item)) return false;
+
+  const query = normalizeText(state.query);
+  if (query && !itemSearchText(item).includes(query)) return false;
+
+  const place = normalizeText(state.place);
+  if (place) {
+    const placeText = normalizeText([
+      item.location,
+      item.city_title,
+      item.district_title,
+      item.region_title,
+      item.province_title,
+    ].join(" "));
+    if (!placeText.includes(place)) return false;
+  }
+
+  const price = numericValue(item.price);
+  const surface = numericValue(item.surface);
+  const rooms = numericValue(item.rooms ?? item.rooms_short);
+  const minPrice = numericValue(state.minPrice);
+  const maxPrice = numericValue(state.maxPrice);
+  const minSurface = numericValue(state.minSurface);
+  const minRooms = numericValue(state.minRooms);
+
+  if (minPrice !== null && (price === null || price < minPrice)) return false;
+  if (maxPrice !== null && (price === null || price > maxPrice)) return false;
+  if (minSurface !== null && (surface === null || surface < minSurface)) return false;
+  if (minRooms !== null && (rooms === null || rooms < minRooms)) return false;
+
+  return true;
+}
+
+function sortValue(item) {
+  if (state.sortBy === "price") return numericValue(item.price);
+  if (state.sortBy === "surface") return numericValue(item.surface);
+  if (state.sortBy === "rooms") return numericValue(item.rooms ?? item.rooms_short);
+  if (state.sortBy === "error_margin") return numericValue(item.error_margin);
+  return normalizeText(item.title || "");
+}
+
+function sortItems(items) {
+  const direction = state.sortOrder === "desc" ? -1 : 1;
+  return [...items].sort((a, b) => {
+    const av = sortValue(a);
+    const bv = sortValue(b);
+    if (av === null || av === "") return 1;
+    if (bv === null || bv === "") return -1;
+    if (typeof av === "number" && typeof bv === "number") return (av - bv) * direction;
+    return String(av).localeCompare(String(bv), "fr", { numeric: true }) * direction;
+  });
+}
+
+function applyFilters() {
+  state.filteredItems = sortItems(state.allItems.filter(matchesFilters));
+  state.total = state.filteredItems.length;
+  state.totalPages = Math.max(1, Math.ceil(state.total / state.pageSize));
+  state.page = Math.min(state.page, state.totalPages);
+  const start = (state.page - 1) * state.pageSize;
+  state.items = state.filteredItems.slice(start, start + state.pageSize);
+  elements.count.textContent = `${state.items.length}/${state.total}`;
+  renderGroups();
+  if (!state.loading) {
+    setStatus(`${state.total} bien${state.total > 1 ? "s" : ""} affiché${state.total > 1 ? "s" : ""}`);
+  }
+  updatePaginationControls();
+}
+
 function buildQueryParams() {
   const params = new URLSearchParams();
   params.set("select", "*");
-
-  if (state.hideApprox) {
-    params.set("approx_used", "eq.false");
-  }
-
-  if (state.type !== "all") {
-    params.set("contract_type", `eq.${state.type}`);
-  }
-
-  if (state.query) {
-    const needle = escapeLike(state.query);
-    const orParts = [
-      `title.ilike.*${needle}*`,
-      `location.ilike.*${needle}*`,
-      `price.ilike.*${needle}*`,
-      `city_title.ilike.*${needle}*`,
-      `district_title.ilike.*${needle}*`,
-    ];
-    params.set("or", `(${orParts.join(",")})`);
-  }
-
-  const field = state.sortBy === "error_margin" ? "error_margin" : "title";
-  const direction = state.sortOrder === "desc" ? "desc" : "asc";
-  params.set("order", `${field}.${direction}.nullslast`);
+  params.set("order", "estate_id.asc.nullslast");
 
   return params;
 }
@@ -241,10 +357,12 @@ async function fetchEstates(reset = false) {
 
   state.loading = true;
   updatePaginationControls();
-  setStatus("Loading...");
+  setStatus("Chargement...");
 
   if (reset) {
     state.items = [];
+    state.allItems = [];
+    state.filteredItems = [];
     state.page = 1;
     state.total = 0;
     state.totalPages = 1;
@@ -252,39 +370,40 @@ async function fetchEstates(reset = false) {
   }
 
   const params = buildQueryParams();
-  const from = (state.page - 1) * state.pageSize;
-  const to = from + state.pageSize - 1;
+  const rows = [];
+  let from = 0;
+  const chunkSize = 1000;
 
-  const response = await fetch(
-    `${config.url}/rest/v1/estates?${params.toString()}`,
-    {
-      headers: {
-        ...supabaseHeaders(),
-        Range: `${from}-${to}`,
-      },
+  while (true) {
+    const to = from + chunkSize - 1;
+    const response = await fetch(
+      `${config.url}/rest/v1/estates?${params.toString()}`,
+      {
+        headers: {
+          ...supabaseHeaders(),
+          Range: `${from}-${to}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      setStatus(`Échec du chargement : ${errorText}`, true);
+      state.loading = false;
+      updatePaginationControls();
+      return;
     }
-  );
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    setStatus(`Load failed: ${errorText}`, true);
-    state.loading = false;
-    updatePaginationControls();
-    return;
+    const data = await response.json();
+    rows.push(...data);
+    if (data.length < chunkSize) break;
+    from += chunkSize;
   }
 
-  const data = await response.json();
-  const contentRange = response.headers.get("Content-Range") || "";
-  const total = Number(contentRange.split("/")[1]) || 0;
-
-  state.items = data;
-  state.total = total || data.length;
-  state.totalPages = Math.max(1, Math.ceil(state.total / state.pageSize));
-  elements.count.textContent = String(state.total);
-
-  renderGroups();
+  state.allItems = rows;
+  applyFilters();
   setActiveTypeButton();
-  setStatus("Loaded");
+  setStatus(`${state.total} bien${state.total > 1 ? "s" : ""} trouvé${state.total > 1 ? "s" : ""}`);
   state.loading = false;
   updatePaginationControls();
 
@@ -302,8 +421,8 @@ function resetAndLoad() {
 }
 
 function matchesGroup(item, groupKey) {
-  if (!groupKey) return "Ungrouped";
-  return item[groupKey] || "Other";
+  if (!groupKey) return "Tous les biens";
+  return item[groupKey] || "Autre";
 }
 
 function createTag(value) {
@@ -318,7 +437,7 @@ function renderGroups() {
 
   if (!state.items.length) {
     const empty = document.createElement("p");
-    empty.textContent = "No results yet.";
+    empty.textContent = state.allItems.length ? "Aucun bien ne correspond aux filtres." : "Aucun résultat pour le moment.";
     elements.groups.appendChild(empty);
     return;
   }
@@ -344,10 +463,19 @@ function renderGroups() {
     grid.className = "cards-grid";
 
     grouped[groupName].forEach((item, index) => {
-      const card = document.createElement("button");
+      const card = document.createElement("article");
       card.className = "card";
+      if (isChecked(item)) card.classList.add("checked");
       card.style.animationDelay = `${index * 0.02}s`;
+      card.tabIndex = 0;
+      card.setAttribute("role", "button");
       card.addEventListener("click", () => openDetails(item));
+      card.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          openDetails(item);
+        }
+      });
 
       const media = document.createElement("div");
       media.className = "card-media";
@@ -356,21 +484,42 @@ function renderGroups() {
       if (imageUrl) {
         const img = document.createElement("img");
         img.src = imageUrl;
-        img.alt = item.title || "Listing image";
+        img.alt = item.title || "Image du bien";
         img.loading = "lazy";
         media.appendChild(img);
       } else {
         const label = document.createElement("span");
-        label.textContent = "No image";
+        label.textContent = "Sans image";
         media.appendChild(label);
       }
 
       const body = document.createElement("div");
       body.className = "card-body";
 
+      const actions = document.createElement("div");
+      actions.className = "card-actions";
+
+      const checkButton = document.createElement("button");
+      checkButton.type = "button";
+      checkButton.className = "check-btn";
+      checkButton.textContent = isChecked(item) ? "Vérifié" : "À vérifier";
+      checkButton.setAttribute("aria-pressed", String(isChecked(item)));
+      checkButton.addEventListener("click", (event) => {
+        event.stopPropagation();
+        const key = checkedKey(item);
+        if (state.checkedKeys.has(key)) {
+          state.checkedKeys.delete(key);
+        } else {
+          state.checkedKeys.add(key);
+        }
+        saveCheckedState();
+        applyFilters();
+      });
+      actions.appendChild(checkButton);
+
       const title = document.createElement("div");
       title.className = "card-title";
-      title.textContent = item.title || "Untitled";
+      title.textContent = item.title || "Sans titre";
 
       const meta = document.createElement("div");
       meta.className = "card-meta";
@@ -382,9 +531,10 @@ function renderGroups() {
       if (item.district_title) tags.appendChild(createTag(item.district_title));
       if (item.price) tags.appendChild(createTag(item.price));
       if (item.surface) tags.appendChild(createTag(item.surface));
-      if (item.rooms) tags.appendChild(createTag(item.rooms));
-      if (item.exclusive) tags.appendChild(createTag("Exclusive"));
+      if (item.rooms) tags.appendChild(createTag(`${item.rooms} pièces`));
+      if (item.exclusive) tags.appendChild(createTag("Exclusif"));
 
+      body.appendChild(actions);
       body.appendChild(title);
       body.appendChild(meta);
       body.appendChild(tags);
@@ -446,17 +596,17 @@ async function fetchProximities(estate) {
 }
 
 function openDetails(item) {
-  elements.detailType.textContent = item.contract_type || "-";
-  elements.detailTitle.textContent = item.title || "Untitled";
+  elements.detailType.textContent = item.contract_type === "acquis" ? "Vente" : item.contract_type === "locazi" ? "Location" : "-";
+  elements.detailTitle.textContent = item.title || "Sans titre";
   elements.detailLocation.textContent = item.location || "";
   elements.detailPrice.textContent = item.price || "-";
   elements.detailSurface.textContent = item.surface || "-";
   elements.detailRooms.textContent = item.rooms || item.rooms_short || "-";
-  elements.detailExclusive.textContent = item.exclusive ? "Yes" : "No";
+  elements.detailExclusive.textContent = item.exclusive ? "Oui" : "Non";
   elements.detailLat.textContent = item.lat ?? "-";
   elements.detailLon.textContent = item.lon ?? "-";
   elements.detailError.textContent = item.error_margin ?? "-";
-  elements.detailApprox.textContent = item.approx_used ? "Yes" : "No";
+  elements.detailApprox.textContent = item.approx_used ? "Oui" : "Non";
   elements.detailErrorMessage.textContent = item.locator_error || "";
 
   if (item.map_url) {
@@ -479,20 +629,20 @@ function openDetails(item) {
     elements.detailSource.style.opacity = "0.5";
   }
 
-  elements.detailImages.innerHTML = "<p class=\"status\">Loading images...</p>";
-  elements.detailProximity.innerHTML = "<li>Loading proximity...</li>";
+  elements.detailImages.innerHTML = "<p class=\"status\">Chargement des images...</p>";
+  elements.detailProximity.innerHTML = "<li>Chargement des proximités...</li>";
 
   fetchImages(item).then((images) => {
     elements.detailImages.innerHTML = "";
     const list = images.length ? images : (item.card_image ? [item.card_image] : []);
     if (!list.length) {
-      elements.detailImages.innerHTML = "<p class=\"status\">No images</p>";
+      elements.detailImages.innerHTML = "<p class=\"status\">Aucune image</p>";
       return;
     }
     list.forEach((url) => {
       const img = document.createElement("img");
       img.src = url;
-      img.alt = item.title || "Listing image";
+      img.alt = item.title || "Image du bien";
       img.loading = "lazy";
       elements.detailImages.appendChild(img);
     });
@@ -501,7 +651,7 @@ function openDetails(item) {
   fetchProximities(item).then((points) => {
     elements.detailProximity.innerHTML = "";
     if (!points.length) {
-      elements.detailProximity.innerHTML = "<li>No proximity data</li>";
+      elements.detailProximity.innerHTML = "<li>Aucune donnée de proximité</li>";
       return;
     }
     points.forEach((entry) => {
@@ -532,7 +682,7 @@ async function handleLogin() {
   const email = (config.authEmail || elements.authEmail.value || "").trim();
   const password = (elements.authPassword.value || "").trim();
   if (!email || !password) {
-    showAuthPanel("Email and password required");
+    showAuthPanel("E-mail et mot de passe requis");
     return;
   }
 
@@ -542,7 +692,7 @@ async function handleLogin() {
   });
 
   if (error || !data.session) {
-    showAuthPanel(error ? error.message : "Login failed");
+    showAuthPanel(error ? error.message : "Connexion impossible");
     return;
   }
 
@@ -562,7 +712,43 @@ async function handleSignOut() {
   await client.auth.signOut();
   currentSession = null;
   elements.signOutBtn.classList.add("hidden");
-  showAuthPanel("Signed out");
+  showAuthPanel("Déconnecté");
+}
+
+function scheduleFilterUpdate() {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => {
+    state.query = elements.searchInput.value.trim();
+    state.place = elements.placeFilter.value.trim();
+    state.minPrice = elements.minPrice.value.trim();
+    state.maxPrice = elements.maxPrice.value.trim();
+    state.minSurface = elements.minSurface.value.trim();
+    state.minRooms = elements.minRooms.value.trim();
+    state.checkedFilter = elements.checkedFilter.value;
+    state.page = 1;
+    applyFilters();
+  }, 180);
+}
+
+function clearFilters() {
+  elements.searchInput.value = "";
+  elements.placeFilter.value = "";
+  elements.minPrice.value = "";
+  elements.maxPrice.value = "";
+  elements.minSurface.value = "";
+  elements.minRooms.value = "";
+  elements.checkedFilter.value = "all";
+  elements.hideApproxToggle.checked = true;
+  state.query = "";
+  state.place = "";
+  state.minPrice = "";
+  state.maxPrice = "";
+  state.minSurface = "";
+  state.minRooms = "";
+  state.checkedFilter = "all";
+  state.hideApprox = true;
+  state.page = 1;
+  applyFilters();
 }
 
 function attachEvents() {
@@ -571,20 +757,22 @@ function attachEvents() {
   elements.authLoginBtn.addEventListener("click", handleLogin);
   elements.signOutBtn.addEventListener("click", handleSignOut);
 
-  elements.searchInput.addEventListener("input", () => {
-    clearTimeout(searchTimer);
-    searchTimer = setTimeout(() => {
-      state.query = elements.searchInput.value.trim();
-      resetAndLoad();
-    }, 300);
-  });
+  elements.searchInput.addEventListener("input", scheduleFilterUpdate);
+  elements.placeFilter.addEventListener("input", scheduleFilterUpdate);
+  elements.minPrice.addEventListener("input", scheduleFilterUpdate);
+  elements.maxPrice.addEventListener("input", scheduleFilterUpdate);
+  elements.minSurface.addEventListener("input", scheduleFilterUpdate);
+  elements.minRooms.addEventListener("input", scheduleFilterUpdate);
+  elements.checkedFilter.addEventListener("change", scheduleFilterUpdate);
+  elements.clearFiltersBtn.addEventListener("click", clearFilters);
 
   elements.typeFilterGroup.addEventListener("click", (event) => {
     const button = event.target.closest("[data-type]");
     if (!button) return;
     state.type = button.dataset.type;
     setActiveTypeButton();
-    resetAndLoad();
+    state.page = 1;
+    applyFilters();
   });
 
   elements.groupBy.addEventListener("change", () => {
@@ -594,34 +782,38 @@ function attachEvents() {
 
   elements.sortBy.addEventListener("change", () => {
     state.sortBy = elements.sortBy.value;
-    resetAndLoad();
+    state.page = 1;
+    applyFilters();
   });
 
   elements.sortOrder.addEventListener("change", () => {
     state.sortOrder = elements.sortOrder.value;
-    resetAndLoad();
+    state.page = 1;
+    applyFilters();
   });
 
   elements.hideApproxToggle.addEventListener("change", () => {
     state.hideApprox = elements.hideApproxToggle.checked;
-    resetAndLoad();
+    state.page = 1;
+    applyFilters();
   });
 
   elements.pageSizeInput.addEventListener("change", () => {
     state.pageSize = Math.max(1, Math.min(200, Number(elements.pageSizeInput.value || 24)));
-    resetAndLoad();
+    state.page = 1;
+    applyFilters();
   });
 
   elements.prevPageBtn.addEventListener("click", () => {
     if (state.page <= 1) return;
     state.page -= 1;
-    fetchEstates(false);
+    applyFilters();
   });
 
   elements.nextPageBtn.addEventListener("click", () => {
     if (state.page >= state.totalPages) return;
     state.page += 1;
-    fetchEstates(false);
+    applyFilters();
   });
 
   elements.detailClose.addEventListener("click", closeDetails);
@@ -642,7 +834,7 @@ function init() {
         hideAuthPanel();
       } else {
         elements.signOutBtn.classList.add("hidden");
-        showAuthPanel("Login required");
+        showAuthPanel("Connexion requise");
       }
     });
   }
