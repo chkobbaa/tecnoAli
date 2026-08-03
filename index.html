@@ -105,81 +105,82 @@
       </div>
     </div>
     <div id="activeFilterSummary" class="active-filter-summary" aria-live="polite"></div>
-    <div id="filterDrawer" class="filter-drawer" aria-label="Filtres avancés">
-      <div class="drawer-header">
-        <div>
-          <p class="eyebrow">Affiner</p>
-          <h2>Filtres</h2>
-        </div>
-        <button id="filterCloseBtn" class="btn ghost" type="button">Fermer</button>
-      </div>
-      <div class="control-row secondary-filters">
-        <label class="control">
-          <span>Lieu</span>
-          <input id="placeFilter" type="search" placeholder="Ville, zone, quartier">
-        </label>
-        <label class="control">
-          <span>Grouper</span>
-          <select id="groupBy">
-            <option value="none">Aucun</option>
-            <option value="region_title">Région</option>
-            <option value="city_title">Zone</option>
-            <option value="district_title">Quartier</option>
-          </select>
-        </label>
-        <label class="control">
-          <span>Trier</span>
-          <select id="sortBy">
-            <option value="title">Titre</option>
-            <option value="price">Prix</option>
-            <option value="surface">Surface</option>
-            <option value="rooms">Pièces</option>
-            <option value="updated_at">Mise à jour</option>
-            <option value="error_margin">Marge d'erreur</option>
-          </select>
-        </label>
-        <label class="control">
-          <span>Ordre</span>
-          <select id="sortOrder">
-            <option value="asc">Asc</option>
-            <option value="desc">Desc</option>
-          </select>
-        </label>
-        <label class="control range-control">
-          <span>Prix min</span>
-          <input id="minPrice" type="number" min="0" step="1000" placeholder="0">
-        </label>
-        <label class="control range-control">
-          <span>Prix max</span>
-          <input id="maxPrice" type="number" min="0" step="1000" placeholder="Illimité">
-        </label>
-        <label class="control range-control">
-          <span>Surface min</span>
-          <input id="minSurface" type="number" min="0" step="10" placeholder="0">
-        </label>
-        <label class="control range-control">
-          <span>Pièces min</span>
-          <input id="minRooms" type="number" min="0" step="1" placeholder="0">
-        </label>
-        <label class="control">
-          <span>Vérification</span>
-          <select id="checkedFilter">
-            <option value="all">Tous</option>
-            <option value="unchecked">À vérifier</option>
-            <option value="checked">Vérifiés</option>
-          </select>
-        </label>
-        <label class="control control-inline">
-          <span>Masquer approx.</span>
-          <input id="hideApproxToggle" type="checkbox" checked>
-        </label>
-      </div>
-      <div class="drawer-actions">
-        <button id="clearFiltersBtn" class="btn ghost" type="button">Effacer</button>
-        <button id="filterApplyBtn" class="btn" type="button">Voir les biens</button>
-      </div>
-    </div>
   </section>
+
+  <div id="filterDrawer" class="filter-drawer" aria-label="Filtres avancés">
+    <div class="drawer-header">
+      <div>
+        <p class="eyebrow">Affiner</p>
+        <h2>Filtres</h2>
+      </div>
+      <button id="filterCloseBtn" class="btn ghost" type="button">Fermer</button>
+    </div>
+    <div class="control-row secondary-filters">
+      <label class="control">
+        <span>Lieu</span>
+        <input id="placeFilter" type="search" placeholder="Ville, zone, quartier">
+      </label>
+      <label class="control">
+        <span>Grouper</span>
+        <select id="groupBy">
+          <option value="none">Aucun</option>
+          <option value="region_title">Région</option>
+          <option value="city_title">Zone</option>
+          <option value="district_title">Quartier</option>
+        </select>
+      </label>
+      <label class="control">
+        <span>Trier</span>
+        <select id="sortBy">
+          <option value="title">Titre</option>
+          <option value="price">Prix</option>
+          <option value="surface">Surface</option>
+          <option value="rooms">Pièces</option>
+          <option value="updated_at">Mise à jour</option>
+          <option value="error_margin">Marge d'erreur</option>
+        </select>
+      </label>
+      <label class="control">
+        <span>Ordre</span>
+        <select id="sortOrder">
+          <option value="asc">Asc</option>
+          <option value="desc">Desc</option>
+        </select>
+      </label>
+      <label class="control range-control">
+        <span>Prix min</span>
+        <input id="minPrice" type="number" min="0" step="1000" placeholder="0">
+      </label>
+      <label class="control range-control">
+        <span>Prix max</span>
+        <input id="maxPrice" type="number" min="0" step="1000" placeholder="Illimité">
+      </label>
+      <label class="control range-control">
+        <span>Surface min</span>
+        <input id="minSurface" type="number" min="0" step="10" placeholder="0">
+      </label>
+      <label class="control range-control">
+        <span>Pièces min</span>
+        <input id="minRooms" type="number" min="0" step="1" placeholder="0">
+      </label>
+      <label class="control">
+        <span>Vérification</span>
+        <select id="checkedFilter">
+          <option value="all">Tous</option>
+          <option value="unchecked">À vérifier</option>
+          <option value="checked">Vérifiés</option>
+        </select>
+      </label>
+      <label class="control control-inline">
+        <span>Masquer approx.</span>
+        <input id="hideApproxToggle" type="checkbox" checked>
+      </label>
+    </div>
+    <div class="drawer-actions">
+      <button id="clearFiltersBtn" class="btn ghost" type="button">Effacer</button>
+      <button id="filterApplyBtn" class="btn" type="button">Voir les biens</button>
+    </div>
+  </div>
 
   <main>
     <div id="insights" class="insights" aria-live="polite"></div>

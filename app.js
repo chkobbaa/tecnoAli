@@ -619,9 +619,11 @@ function updateHeaderStats() {
   const lastUpdated = latestUpdatedAt(state.allItems);
   if (lastUpdated) {
     const relative = formatRelativeTime(lastUpdated);
-    elements.lastUpdated.textContent = relative ? `${formatDateTime(lastUpdated)} · ${relative}` : formatDateTime(lastUpdated);
+    elements.lastUpdated.textContent = relative || formatDateTime(lastUpdated);
+    elements.lastUpdated.title = formatDateTime(lastUpdated);
   } else {
     elements.lastUpdated.textContent = state.allItems.length ? `Chargé ${formatDateTime(new Date())}` : "-";
+    elements.lastUpdated.title = "";
   }
 }
 
@@ -1044,6 +1046,9 @@ function closeDetails() {
 }
 
 function openFilters() {
+  if (window.matchMedia("(min-width: 860px)").matches) {
+    return;
+  }
   elements.filterDrawer.classList.add("open");
   elements.filterBackdrop.classList.remove("hidden");
   elements.filtersToggleBtn.setAttribute("aria-expanded", "true");
@@ -1055,6 +1060,14 @@ function closeFilters() {
   elements.filterBackdrop.classList.add("hidden");
   elements.filtersToggleBtn.setAttribute("aria-expanded", "false");
   document.body.classList.remove("filters-open");
+}
+
+function toggleFilters() {
+  if (elements.filterDrawer.classList.contains("open")) {
+    closeFilters();
+  } else {
+    openFilters();
+  }
 }
 
 async function handleLogin() {
@@ -1145,10 +1158,15 @@ function attachEvents() {
   elements.reloadBtn.addEventListener("click", resetAndLoad);
   elements.authLoginBtn.addEventListener("click", handleLogin);
   elements.signOutBtn.addEventListener("click", handleSignOut);
-  elements.filtersToggleBtn.addEventListener("click", openFilters);
+  elements.filtersToggleBtn.addEventListener("click", toggleFilters);
   elements.filterCloseBtn.addEventListener("click", closeFilters);
   elements.filterApplyBtn.addEventListener("click", closeFilters);
   elements.filterBackdrop.addEventListener("click", closeFilters);
+  window.addEventListener("resize", () => {
+    if (window.matchMedia("(min-width: 860px)").matches) {
+      closeFilters();
+    }
+  });
 
   elements.searchInput.addEventListener("input", scheduleFilterUpdate);
   elements.placeFilter.addEventListener("input", scheduleFilterUpdate);
