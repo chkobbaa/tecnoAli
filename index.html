@@ -4,9 +4,6 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Visionneuse Tecnocasa</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Spectral:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./styles.css">
   <script>window.__ENV = window.__ENV || {};</script>
   <script src="./env.js"></script>
@@ -14,21 +11,26 @@
   <script src="./app.js" defer></script>
 </head>
 <body>
-  <div class="bg-orb orb-left"></div>
-  <div class="bg-orb orb-right"></div>
-
-  <header class="hero">
-    <div>
-      <p class="eyebrow">Visionneuse</p>
+  <header class="app-header">
+    <div class="brand-block">
+      <p class="eyebrow">Tableau de bord</p>
       <h1>Biens Tecnocasa</h1>
-      <p class="subtitle">Parcourez les annonces Supabase avec une recherche large, des filtres précis et un suivi de vérification.</p>
+      <p class="subtitle">Inventaire immobilier, vérification terrain et signaux de localisation.</p>
     </div>
-    <div class="hero-stats">
+    <div class="header-metrics">
       <div class="stat">
-        <span class="stat-label">Affichés</span>
+        <span class="stat-label">Résultats</span>
         <span id="count" class="stat-value">0</span>
       </div>
       <div class="stat">
+        <span class="stat-label">Stock</span>
+        <span id="inventoryCount" class="stat-value">0</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Mise à jour</span>
+        <span id="lastUpdated" class="stat-value">-</span>
+      </div>
+      <div class="stat status-stat">
         <span class="stat-label">État</span>
         <span id="status" class="stat-value">Prêt</span>
       </div>
@@ -73,12 +75,18 @@
     <p id="authMessage" class="status"></p>
   </section>
 
-  <section class="controls">
-    <div class="control-row primary-filters">
+  <section class="controls" aria-label="Filtres">
+    <div class="quick-controls">
       <label class="control search-control">
-        <span>Recherche globale</span>
-        <input id="searchInput" type="search" placeholder="Titre, lieu, prix, surface, ID, type...">
+        <span>Recherche</span>
+        <input id="searchInput" type="search" placeholder="Titre, ville, quartier, ID...">
       </label>
+      <button id="filtersToggleBtn" class="btn ghost filter-toggle" type="button" aria-controls="filterDrawer" aria-expanded="false">
+        Filtres <span id="activeFilterCount" class="count-badge">0</span>
+      </button>
+      <button id="reloadBtn" class="btn ghost reload-btn" type="button">Actualiser</button>
+    </div>
+    <div class="quick-segments">
       <div class="control">
         <span>Contrat</span>
         <div id="typeFilterGroup" class="segmented-control" role="group" aria-label="Filtre contrat">
@@ -87,72 +95,94 @@
           <button class="segment" type="button" data-type="locazi">Location</button>
         </div>
       </div>
-      <label class="control">
-        <span>Grouper</span>
-        <select id="groupBy">
-          <option value="none">Aucun</option>
-          <option value="region_title">Région</option>
-          <option value="city_title">Zone</option>
-          <option value="district_title">Quartier</option>
-        </select>
-      </label>
-      <label class="control">
-        <span>Trier</span>
-        <select id="sortBy">
-          <option value="title">Titre</option>
-          <option value="price">Prix</option>
-          <option value="surface">Surface</option>
-          <option value="rooms">Pièces</option>
-          <option value="error_margin">Marge d'erreur</option>
-        </select>
-      </label>
-      <label class="control">
-        <span>Ordre</span>
-        <select id="sortOrder">
-          <option value="asc">Asc</option>
-          <option value="desc">Desc</option>
-        </select>
-      </label>
-      <button id="reloadBtn" class="btn ghost">Actualiser</button>
+      <div class="control">
+        <span>Nature</span>
+        <div id="kindFilterGroup" class="segmented-control" role="group" aria-label="Filtre nature">
+          <button class="segment active" type="button" data-kind="all">Tous</button>
+          <button class="segment" type="button" data-kind="home">Logement</button>
+          <button class="segment" type="button" data-kind="land">Terrain</button>
+        </div>
+      </div>
     </div>
-    <div class="control-row secondary-filters">
-      <label class="control">
-        <span>Lieu</span>
-        <input id="placeFilter" type="search" placeholder="Ville, zone, quartier">
-      </label>
-      <label class="control range-control">
-        <span>Prix min</span>
-        <input id="minPrice" type="number" min="0" step="1000" placeholder="0">
-      </label>
-      <label class="control range-control">
-        <span>Prix max</span>
-        <input id="maxPrice" type="number" min="0" step="1000" placeholder="Illimité">
-      </label>
-      <label class="control range-control">
-        <span>Surface min</span>
-        <input id="minSurface" type="number" min="0" step="10" placeholder="0">
-      </label>
-      <label class="control range-control">
-        <span>Pièces min</span>
-        <input id="minRooms" type="number" min="0" step="1" placeholder="0">
-      </label>
-      <label class="control">
-        <span>Vérification</span>
-        <select id="checkedFilter">
-          <option value="all">Tous</option>
-          <option value="unchecked">À vérifier</option>
-          <option value="checked">Vérifiés</option>
-        </select>
-      </label>
-      <label class="control control-inline">
-        <span>Masquer approx.</span>
-        <input id="hideApproxToggle" type="checkbox" checked>
-      </label>
-      <button id="clearFiltersBtn" class="btn ghost" type="button">Effacer</button>
+    <div id="activeFilterSummary" class="active-filter-summary" aria-live="polite"></div>
+    <div id="filterDrawer" class="filter-drawer" aria-label="Filtres avancés">
+      <div class="drawer-header">
+        <div>
+          <p class="eyebrow">Affiner</p>
+          <h2>Filtres</h2>
+        </div>
+        <button id="filterCloseBtn" class="btn ghost" type="button">Fermer</button>
+      </div>
+      <div class="control-row secondary-filters">
+        <label class="control">
+          <span>Lieu</span>
+          <input id="placeFilter" type="search" placeholder="Ville, zone, quartier">
+        </label>
+        <label class="control">
+          <span>Grouper</span>
+          <select id="groupBy">
+            <option value="none">Aucun</option>
+            <option value="region_title">Région</option>
+            <option value="city_title">Zone</option>
+            <option value="district_title">Quartier</option>
+          </select>
+        </label>
+        <label class="control">
+          <span>Trier</span>
+          <select id="sortBy">
+            <option value="title">Titre</option>
+            <option value="price">Prix</option>
+            <option value="surface">Surface</option>
+            <option value="rooms">Pièces</option>
+            <option value="updated_at">Mise à jour</option>
+            <option value="error_margin">Marge d'erreur</option>
+          </select>
+        </label>
+        <label class="control">
+          <span>Ordre</span>
+          <select id="sortOrder">
+            <option value="asc">Asc</option>
+            <option value="desc">Desc</option>
+          </select>
+        </label>
+        <label class="control range-control">
+          <span>Prix min</span>
+          <input id="minPrice" type="number" min="0" step="1000" placeholder="0">
+        </label>
+        <label class="control range-control">
+          <span>Prix max</span>
+          <input id="maxPrice" type="number" min="0" step="1000" placeholder="Illimité">
+        </label>
+        <label class="control range-control">
+          <span>Surface min</span>
+          <input id="minSurface" type="number" min="0" step="10" placeholder="0">
+        </label>
+        <label class="control range-control">
+          <span>Pièces min</span>
+          <input id="minRooms" type="number" min="0" step="1" placeholder="0">
+        </label>
+        <label class="control">
+          <span>Vérification</span>
+          <select id="checkedFilter">
+            <option value="all">Tous</option>
+            <option value="unchecked">À vérifier</option>
+            <option value="checked">Vérifiés</option>
+          </select>
+        </label>
+        <label class="control control-inline">
+          <span>Masquer approx.</span>
+          <input id="hideApproxToggle" type="checkbox" checked>
+        </label>
+      </div>
+      <div class="drawer-actions">
+        <button id="clearFiltersBtn" class="btn ghost" type="button">Effacer</button>
+        <button id="filterApplyBtn" class="btn" type="button">Voir les biens</button>
+      </div>
     </div>
   </section>
 
   <main>
+    <div id="insights" class="insights" aria-live="polite"></div>
     <div id="groups" class="groups"></div>
     <div class="pagination">
       <label class="control page-size-control">
@@ -168,6 +198,7 @@
   </main>
 
   <div id="backdrop" class="backdrop hidden"></div>
+  <div id="filterBackdrop" class="filter-backdrop hidden"></div>
   <aside id="details" class="details hidden">
     <div class="details-header">
       <div>
@@ -180,6 +211,10 @@
     <div class="details-content">
       <div id="detailImages" class="detail-images"></div>
       <div class="detail-grid">
+        <div class="detail-item">
+          <span class="label">Nature</span>
+          <span id="detailKind" class="value">-</span>
+        </div>
         <div class="detail-item">
           <span class="label">Prix</span>
           <span id="detailPrice" class="value">-</span>
@@ -211,6 +246,14 @@
         <div class="detail-item">
           <span class="label">Approx.</span>
           <span id="detailApprox" class="value">-</span>
+        </div>
+        <div class="detail-item">
+          <span class="label">ID</span>
+          <span id="detailEstateId" class="value">-</span>
+        </div>
+        <div class="detail-item">
+          <span class="label">Mise à jour</span>
+          <span id="detailUpdated" class="value">-</span>
         </div>
         <div class="detail-item">
           <span class="label">Carte</span>
