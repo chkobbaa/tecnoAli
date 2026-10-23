@@ -475,7 +475,7 @@ function itemSearchText(item) {
 function buildRegionOptions() {
   const uniqueRegions = [...new Set(
     state.allItems
-      .map((item) => item.region_title || item.city_title || item.district_title || "")
+      .map((item) => item.district_title || item.city_title || item.region_title || "")
       .filter(Boolean)
   )].sort((a, b) => a.localeCompare(b, "fr"));
 
@@ -502,9 +502,9 @@ function matchesFilters(item) {
   if (state.hideApprox && item.approx_used) return false;
   if (state.region !== "all") {
     const regionText = normalizeText([
-      item.region_title,
-      item.city_title,
       item.district_title,
+      item.city_title,
+      item.region_title,
       item.location,
     ].join(" "));
     if (!regionText.includes(normalizeText(state.region))) return false;
