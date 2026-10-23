@@ -81,10 +81,23 @@
         <span>Recherche</span>
         <input id="searchInput" type="search" placeholder="Titre, ville, quartier, ID...">
       </label>
+      <label class="control region-select-control">
+        <span>Région</span>
+        <select id="regionFilter">
+          <option value="all">Toutes</option>
+        </select>
+      </label>
       <button id="filtersToggleBtn" class="btn ghost filter-toggle" type="button" aria-controls="filterDrawer" aria-expanded="false">
         Filtres <span id="activeFilterCount" class="count-badge">0</span>
       </button>
       <button id="reloadBtn" class="btn ghost reload-btn" type="button">Actualiser</button>
+    </div>
+    <div class="manual-url-row">
+      <label class="control manual-url-control">
+        <span>URL Tecnocasa manuelle</span>
+        <input id="manualUrlInput" type="url" placeholder="https://www.tecnocasa.tn/annonces/...">
+      </label>
+      <button id="manualUrlBtn" class="btn" type="button">Ajouter l'annonce</button>
     </div>
     <div class="quick-segments">
       <div class="control">

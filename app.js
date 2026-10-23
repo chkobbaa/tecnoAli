@@ -31,6 +31,7 @@ const state = {
   sortOrder: "asc",
   hideApprox: true,
   place: "",
+  region: "all",
   minPrice: "",
   maxPrice: "",
   minSurface: "",
@@ -50,6 +51,9 @@ const elements = {
   nextPageBtn: document.getElementById("nextPageBtn"),
   pageInfo: document.getElementById("pageInfo"),
   searchInput: document.getElementById("searchInput"),
+  regionFilter: document.getElementById("regionFilter"),
+  manualUrlInput: document.getElementById("manualUrlInput"),
+  manualUrlBtn: document.getElementById("manualUrlBtn"),
   placeFilter: document.getElementById("placeFilter"),
   minPrice: document.getElementById("minPrice"),
   maxPrice: document.getElementById("maxPrice"),
@@ -468,10 +472,43 @@ function itemSearchText(item) {
   ].join(" "));
 }
 
+function buildRegionOptions() {
+  const uniqueRegions = [...new Set(
+    state.allItems
+      .map((item) => item.region_title || item.city_title || item.district_title || "")
+      .filter(Boolean)
+  )].sort((a, b) => a.localeCompare(b, "fr"));
+
+  const options = ["<option value=\"all\">Toutes</option>"];
+  uniqueRegions.forEach((region) => {
+    options.push(`<option value="${region}">${region}</option>`);
+  });
+
+  if (elements.regionFilter) {
+    elements.regionFilter.innerHTML = options.join("");
+    elements.regionFilter.value = state.region && uniqueRegions.includes(state.region) ? state.region : "all";
+  }
+
+  const groupOptions = ["<option value=\"all\">Toutes</option>"];
+  uniqueRegions.forEach((region) => {
+    groupOptions.push(`<option value="${region}">${region}</option>`);
+  });
+  return groupOptions.join("");
+}
+
 function matchesFilters(item) {
   if (state.type !== "all" && item.contract_type !== state.type) return false;
   if (state.propertyKind !== "all" && detectPropertyKind(item) !== state.propertyKind) return false;
   if (state.hideApprox && item.approx_used) return false;
+  if (state.region !== "all") {
+    const regionText = normalizeText([
+      item.region_title,
+      item.city_title,
+      item.district_title,
+      item.location,
+    ].join(" "));
+    if (!regionText.includes(normalizeText(state.region))) return false;
+  }
 
   if (state.checkedFilter === "checked" && !isChecked(item)) return false;
   if (state.checkedFilter === "unchecked" && isChecked(item)) return false;
@@ -573,6 +610,7 @@ function renderInsights() {
 function activeFilterLabels() {
   const labels = [];
   if (state.query) labels.push(`Recherche: ${state.query}`);
+  if (state.region !== "all") labels.push(`Région: ${state.region}`);
   if (state.type !== "all") labels.push(contractLabel(state.type));
   if (state.propertyKind !== "all") labels.push(propertyKindLabel(state.propertyKind));
   if (state.place) labels.push(`Lieu: ${state.place}`);
@@ -637,6 +675,9 @@ function applyFilters() {
   updateHeaderStats();
   renderInsights();
   renderFilterSummary();
+  if (elements.regionFilter) {
+    elements.regionFilter.value = state.region;
+  }
   renderGroups();
   if (!state.loading) {
     setStatus(`${state.total} bien${state.total > 1 ? "s" : ""} affiché${state.total > 1 ? "s" : ""}`);
@@ -723,6 +764,7 @@ async function fetchEstates(reset = false) {
 
   stopLiveStatus();
   state.allItems = rows;
+  buildRegionOptions();
   applyFilters();
   setActiveTypeButton();
   setActiveKindButton();
@@ -778,9 +820,27 @@ function renderGroups() {
     const section = document.createElement("section");
     section.className = "group";
 
+    const headerWrap = document.createElement("div");
+    headerWrap.className = "group-header";
+
     const header = document.createElement("h2");
     header.textContent = `${groupName} (${grouped[groupName].length})`;
-    section.appendChild(header);
+    headerWrap.appendChild(header);
+
+    const regionPicker = document.createElement("select");
+    regionPicker.className = "group-region-picker";
+    regionPicker.innerHTML = buildRegionOptions();
+    regionPicker.value = state.region;
+    regionPicker.addEventListener("change", () => {
+      state.region = regionPicker.value;
+      if (elements.regionFilter) {
+        elements.regionFilter.value = state.region;
+      }
+      state.page = 1;
+      applyFilters();
+    });
+    headerWrap.appendChild(regionPicker);
+    section.appendChild(headerWrap);
 
     const grid = document.createElement("div");
     grid.className = "cards-grid";
@@ -1070,6 +1130,63 @@ function toggleFilters() {
   }
 }
 
+async function handleManualEstateAdd() {
+  const rawUrl = (elements.manualUrlInput?.value || "").trim();
+  if (!rawUrl) {
+    setStatus("Renseignez une URL Tecnocasa pour ajouter l'annonce.", true);
+    return;
+  }
+
+  const button = elements.manualUrlBtn;
+  if (button) button.disabled = true;
+  startLiveStatus([
+    "Vérification de l'URL Tecnocasa",
+    "Lecture de la fiche annonce",
+    "Calcul de la localisation et des détails",
+    "Enregistrement du bien dans la liste",
+  ]);
+
+  try {
+    const response = await fetch("/api/manual-estate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url: rawUrl }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || "Impossible d'ajouter cette annonce.");
+    }
+
+    const item = data.item || {};
+    const existingIndex = state.allItems.findIndex((entry) => {
+      const entryKey = `${entry.contract_type || ""}:${entry.estate_id || entry.id || ""}`;
+      const incomingKey = `${item.type || ""}:${item.id || data.estate_id || ""}`;
+      return entryKey === incomingKey;
+    });
+
+    if (existingIndex >= 0) {
+      state.allItems[existingIndex] = { ...state.allItems[existingIndex], ...item };
+    } else {
+      state.allItems.unshift(item);
+    }
+
+    state.region = item.region_title || state.region;
+    buildRegionOptions();
+    applyFilters();
+    if (item.map_url) {
+      setStatus(`Annonce ajoutée. Carte : ${item.map_url}`);
+    } else {
+      setStatus("Annonce ajoutée : données complètes et visible dans la liste.");
+    }
+    if (elements.manualUrlInput) elements.manualUrlInput.value = "";
+  } catch (error) {
+    setStatus(`Ajout manuel impossible : ${error.message}`, true);
+  } finally {
+    stopLiveStatus();
+    if (button) button.disabled = false;
+  }
+}
+
 async function handleLogin() {
   const client = initSupabase();
   if (!client) {
@@ -1169,6 +1286,24 @@ function attachEvents() {
   });
 
   elements.searchInput.addEventListener("input", scheduleFilterUpdate);
+  if (elements.regionFilter) {
+    elements.regionFilter.addEventListener("change", () => {
+      state.region = elements.regionFilter.value;
+      state.page = 1;
+      applyFilters();
+    });
+  }
+  if (elements.manualUrlBtn) {
+    elements.manualUrlBtn.addEventListener("click", handleManualEstateAdd);
+  }
+  if (elements.manualUrlInput) {
+    elements.manualUrlInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        handleManualEstateAdd();
+      }
+    });
+  }
   elements.placeFilter.addEventListener("input", scheduleFilterUpdate);
   elements.minPrice.addEventListener("input", scheduleFilterUpdate);
   elements.maxPrice.addEventListener("input", scheduleFilterUpdate);
@@ -1254,6 +1389,9 @@ function init() {
   renderFilterSummary();
   setActiveTypeButton();
   setActiveKindButton();
+  if (elements.regionFilter) {
+    elements.regionFilter.value = state.region;
+  }
   if (!hasConfig()) {
     openConfigPanel();
   }
