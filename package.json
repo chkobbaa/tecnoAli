@@ -2,6 +2,7 @@
   "name": "tecnoali-webpage",
   "private": true,
   "scripts": {
+    "start": "node server.js",
     "build": "node build-env.js",
     "vercel-build": "node build-env.js"
   }

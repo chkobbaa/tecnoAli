@@ -54,6 +54,11 @@ const elements = {
   regionFilter: document.getElementById("regionFilter"),
   manualUrlInput: document.getElementById("manualUrlInput"),
   manualUrlBtn: document.getElementById("manualUrlBtn"),
+  manualResultBox: document.getElementById("manualResultBox"),
+  manualResultTitle: document.getElementById("manualResultTitle"),
+  manualResultMeta: document.getElementById("manualResultMeta"),
+  manualResultMapLink: document.getElementById("manualResultMapLink"),
+  manualCopyLinkBtn: document.getElementById("manualCopyLinkBtn"),
   placeFilter: document.getElementById("placeFilter"),
   minPrice: document.getElementById("minPrice"),
   maxPrice: document.getElementById("maxPrice"),
@@ -1133,7 +1138,7 @@ function toggleFilters() {
 async function handleManualEstateAdd() {
   const rawUrl = (elements.manualUrlInput?.value || "").trim();
   if (!rawUrl) {
-    setStatus("Renseignez une URL Tecnocasa pour ajouter l'annonce.", true);
+    setStatus("Renseignez une URL Tecnocasa pour localiser l'annonce.", true);
     return;
   }
 
@@ -1142,25 +1147,102 @@ async function handleManualEstateAdd() {
   startLiveStatus([
     "Vérification de l'URL Tecnocasa",
     "Lecture de la fiche annonce",
-    "Calcul de la localisation et des détails",
-    "Enregistrement du bien dans la liste",
+    "Recherche des points de repère",
+    "Triangulation de la position exacte",
+    "Génération du lien Google Maps",
   ]);
 
   try {
-    const response = await fetch("/api/manual-estate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url: rawUrl }),
-    });
-    const data = await response.json();
-    if (!response.ok) {
-      throw new Error(data.error || "Impossible d'ajouter cette annonce.");
+    const apiCandidates = ["/api/manual-estate"];
+    if (window.__ENV?.API_BASE_URL) {
+      apiCandidates.unshift(`${window.__ENV.API_BASE_URL.replace(/\/$/, "")}/api/manual-estate`);
+    }
+    if (
+      (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") &&
+      window.location.port !== "5000"
+    ) {
+      apiCandidates.push("http://127.0.0.1:5000/api/manual-estate");
+    }
+
+    let data = null;
+    let lastError = null;
+
+    for (const endpoint of apiCandidates) {
+      try {
+        const response = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            url: rawUrl,
+            supabaseUrl: config.url,
+            supabaseKey: config.key,
+          }),
+        });
+
+        const contentType = response.headers.get("content-type") || "";
+        if (contentType.includes("application/json")) {
+          const json = await response.json();
+          if (!response.ok) {
+            throw new Error(json.error || `Erreur serveur (HTTP ${response.status})`);
+          }
+          data = json;
+          break;
+        } else {
+          const text = await response.text();
+          if (!response.ok) {
+            lastError = new Error(`Erreur HTTP ${response.status} sur ${endpoint}`);
+            continue;
+          }
+        }
+      } catch (err) {
+        lastError = err;
+      }
+    }
+
+    if (!data) {
+      throw lastError || new Error("Impossible de joindre le service de localisation.");
     }
 
     const item = data.item || {};
+    const mapUrl = data.map_url || item.map_url;
+
+    // Display result card under the manual URL bar
+    if (elements.manualResultBox && mapUrl) {
+      elements.manualResultBox.classList.remove("hidden");
+      if (elements.manualResultTitle) {
+        elements.manualResultTitle.textContent = item.title || "Annonce localisée";
+      }
+      if (elements.manualResultMeta) {
+        const metaParts = [
+          item.price,
+          item.location,
+          item.surface,
+          item.error_margin != null ? `Précision : ±${item.error_margin}m` : null,
+        ].filter(Boolean);
+        elements.manualResultMeta.textContent = metaParts.join(" • ");
+      }
+      if (elements.manualResultMapLink) {
+        elements.manualResultMapLink.href = mapUrl;
+      }
+      if (elements.manualCopyLinkBtn) {
+        elements.manualCopyLinkBtn.onclick = async () => {
+          try {
+            await navigator.clipboard.writeText(mapUrl);
+            const prev = elements.manualCopyLinkBtn.textContent;
+            elements.manualCopyLinkBtn.textContent = "✓ Lien copié !";
+            setTimeout(() => {
+              elements.manualCopyLinkBtn.textContent = prev;
+            }, 2000);
+          } catch (e) {
+            prompt("Lien Google Maps :", mapUrl);
+          }
+        };
+      }
+    }
+
     const existingIndex = state.allItems.findIndex((entry) => {
       const entryKey = `${entry.contract_type || ""}:${entry.estate_id || entry.id || ""}`;
-      const incomingKey = `${item.type || ""}:${item.id || data.estate_id || ""}`;
+      const incomingKey = `${item.type || item.contract_type || ""}:${item.id || item.estate_id || data.estate_id || ""}`;
       return entryKey === incomingKey;
     });
 
@@ -1173,14 +1255,18 @@ async function handleManualEstateAdd() {
     state.region = item.region_title || state.region;
     buildRegionOptions();
     applyFilters();
-    if (item.map_url) {
-      setStatus(`Annonce ajoutée. Carte : ${item.map_url}`);
+
+    if (mapUrl) {
+      setStatus(`Position calculée avec succès ! Lien Maps : ${mapUrl}`);
     } else {
-      setStatus("Annonce ajoutée : données complètes et visible dans la liste.");
+      setStatus("Annonce analysée : position approximative ou non disponible.");
     }
-    if (elements.manualUrlInput) elements.manualUrlInput.value = "";
+
+    if (item.lat != null && item.lon != null) {
+      openDetails(item);
+    }
   } catch (error) {
-    setStatus(`Ajout manuel impossible : ${error.message}`, true);
+    setStatus(`Localisation impossible : ${error.message}`, true);
   } finally {
     stopLiveStatus();
     if (button) button.disabled = false;

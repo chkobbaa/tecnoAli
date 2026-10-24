@@ -97,7 +97,21 @@
         <span>URL Tecnocasa manuelle</span>
         <input id="manualUrlInput" type="url" placeholder="https://www.tecnocasa.tn/annonces/...">
       </label>
-      <button id="manualUrlBtn" class="btn" type="button">Ajouter l'annonce</button>
+      <button id="manualUrlBtn" class="btn" type="button">Localiser l'annonce</button>
+    </div>
+    <div id="manualResultBox" class="manual-result-box hidden">
+      <div class="manual-result-content">
+        <div class="manual-result-info">
+          <span id="manualResultTitle" class="manual-result-title"></span>
+          <span id="manualResultMeta" class="manual-result-meta"></span>
+        </div>
+        <div class="manual-result-actions">
+          <a id="manualResultMapLink" class="btn btn-map" href="#" target="_blank" rel="noopener noreferrer">
+            📍 Ouvrir Google Maps
+          </a>
+          <button id="manualCopyLinkBtn" class="btn ghost" type="button">Copier le lien</button>
+        </div>
+      </div>
     </div>
     <div class="quick-segments">
       <div class="control">
